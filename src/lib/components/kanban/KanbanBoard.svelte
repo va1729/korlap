@@ -26,6 +26,7 @@
     ready?: boolean;
     depends_on?: string[];
     created_at: number;
+    priority?: number; // Manual priority (lower = higher priority)
   }
 
   interface Props {
@@ -110,7 +111,13 @@
   let showMoreMenu = $state(false);
   let moreMenuBtnEl = $state<HTMLButtonElement | null>(null);
   let moreMenuPos = $state({ top: 0, left: 0 });
+  let showSortMenu = $state(false);
+  let sortMenuBtnEl = $state<HTMLButtonElement | null>(null);
+  let sortMenuPos = $state({ top: 0, left: 0 });
   let detailWs = $state<WorkspaceInfo | null>(null);
+
+  type SortMode = 'created' | 'manual-priority' | 'auto-priority';
+  let sortMode = $state<SortMode>('created');
 
   export function openNewTask() {
     showAddDialog = true;
@@ -121,8 +128,32 @@
   let focusedRow = $state(0);
   let boardEl = $state<HTMLDivElement | null>(null);
 
+  // Sort function for todos
+  function sortTodos(items: TodoItem[]): TodoItem[] {
+    const copy = [...items];
+    switch (sortMode) {
+      case 'manual-priority':
+        return copy.sort((a, b) => {
+          const aPri = a.priority ?? Infinity;
+          const bPri = b.priority ?? Infinity;
+          return aPri - bPri;
+        });
+      case 'auto-priority':
+        // Prioritized todos first (those with priority set), then by creation
+        return copy.sort((a, b) => {
+          const aHasPri = a.priority !== undefined ? 0 : 1;
+          const bHasPri = b.priority !== undefined ? 0 : 1;
+          if (aHasPri !== bHasPri) return aHasPri - bHasPri;
+          return a.created_at - b.created_at;
+        });
+      case 'created':
+      default:
+        return copy.sort((a, b) => a.created_at - b.created_at);
+    }
+  }
+
   // Column data as indexable array: [todo, inProgress, review, done]
-  const columnItems = $derived([todos, inProgress, review, done] as const);
+  const columnItems = $derived([sortTodos(todos), inProgress, review, done] as const);
 
   function colLen(col: number): number {
     return columnItems[col]?.length ?? 0;
@@ -248,6 +279,20 @@
     showMoreMenu = !showMoreMenu;
   }
 
+  function openSortMenu(e: MouseEvent) {
+    e.stopPropagation();
+    if (sortMenuBtnEl) {
+      const rect = sortMenuBtnEl.getBoundingClientRect();
+      sortMenuPos = { top: rect.bottom + 4, left: rect.left };
+    }
+    showSortMenu = !showSortMenu;
+  }
+
+  function setSortMode(mode: SortMode) {
+    sortMode = mode;
+    showSortMenu = false;
+  }
+
   function handleAddSubmit(data: TaskData) {
     onNewTodo(data);
     showAddDialog = false;
@@ -293,7 +338,17 @@
 <div class="kanban-wrapper">
 <div class="kanban-board" bind:this={boardEl}>
   <KanbanColumn title="Todo" count={todos.length}>
-    {#each todos as todo, i (todo.id)}
+    {#snippet headerAction()}
+      <button
+        class="column-menu-btn"
+        bind:this={sortMenuBtnEl}
+        onclick={openSortMenu}
+        use:tooltip={{ text: `Sort: ${sortMode === 'created' ? 'Created' : sortMode === 'manual-priority' ? 'Manual priority' : 'Auto priority'}` }}
+      >
+        <Ellipsis size={14} />
+      </button>
+    {/snippet}
+    {#each columnItems[0] as todo, i (todo.id)}
       <KanbanCard
         type="todo"
         todoId={todo.id}
@@ -312,7 +367,7 @@
         onToggleReady={() => onToggleReady(todo.id)}
       />
     {/each}
-    {#if todos.length === 0}
+    {#if columnItems[0].length === 0}
       <div class="empty-hint">Add a task to get started</div>
     {/if}
     {#snippet footer()}
@@ -524,6 +579,34 @@
   </div>
 {/if}
 
+{#if showSortMenu}
+  <!-- svelte-ignore a11y_no_static_element_interactions -->
+  <div class="dropdown-backdrop" onmousedown={() => { showSortMenu = false; }}></div>
+  <div class="dropdown-menu" style="top: {sortMenuPos.top}px; left: {sortMenuPos.left}px;">
+    <button
+      class="dropdown-item"
+      class:active={sortMode === 'created'}
+      onclick={() => setSortMode('created')}
+    >
+      By creation date
+    </button>
+    <button
+      class="dropdown-item"
+      class:active={sortMode === 'manual-priority'}
+      onclick={() => setSortMode('manual-priority')}
+    >
+      By manual priority
+    </button>
+    <button
+      class="dropdown-item"
+      class:active={sortMode === 'auto-priority'}
+      onclick={() => setSortMode('auto-priority')}
+    >
+      By auto priority
+    </button>
+  </div>
+{/if}
+
 <style>
   .kanban-wrapper {
     position: relative;
@@ -663,5 +746,10 @@
   .dropdown-item.danger:hover {
     background: color-mix(in srgb, #e05252 15%, transparent);
     color: #e05252;
+  }
+
+  .dropdown-item.active {
+    background: color-mix(in srgb, var(--accent) 15%, transparent);
+    color: var(--accent);
   }
 </style>
