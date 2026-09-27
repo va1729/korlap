@@ -18,6 +18,7 @@
     thinkingMode: boolean;
     model: string;
     provider?: AgentProvider;
+    priority?: number;
   }
 
   interface Props {
@@ -30,6 +31,7 @@
     initialThinkingMode?: boolean;
     initialModel?: string;
     initialProvider?: AgentProvider;
+    initialPriority?: number;
     providerInfo?: ProviderInfo | null;
     submitLabel?: string;
     onSubmit: (data: TaskData) => void;
@@ -47,6 +49,7 @@
     initialThinkingMode = false,
     initialModel = "",
     initialProvider,
+    initialPriority,
     providerInfo = null,
     submitLabel = "Add",
     onSubmit,
@@ -61,6 +64,7 @@
   let planMode = $state(initialPlanMode);
   let thinkingMode = $state(initialThinkingMode);
   let model = $state(initialModel);
+  let priority = $state<number | undefined>(initialPriority);
   let provider = $state<AgentProvider>(initialProvider ?? providerInfo?.provider ?? "claude");
   let showModelDropdown = $state(false);
   let showProviderDropdown = $state(false);
@@ -122,6 +126,7 @@
       thinkingMode,
       model,
       provider,
+      priority,
     };
   }
 
@@ -463,6 +468,18 @@
             </div>
           {/if}
         </div>
+      </div>
+      <div class="priority-input">
+        <label for="priority-field">Priority:</label>
+        <input
+          id="priority-field"
+          type="number"
+          bind:value={priority}
+          placeholder="Optional"
+          min="0"
+          max="999"
+          class="priority-field"
+        />
       </div>
       <div class="footer-actions">
         {#if repoId}
@@ -846,5 +863,36 @@
 
   .submit-btn:hover:not(:disabled) {
     filter: brightness(1.1);
+  }
+
+  .priority-input {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0 0.25rem;
+  }
+
+  .priority-input label {
+    font-size: 0.72rem;
+    color: var(--text-dim);
+    font-weight: 500;
+    white-space: nowrap;
+  }
+
+  .priority-field {
+    width: 60px;
+    padding: 0.3rem 0.4rem;
+    background: var(--input-inset-bg);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    color: var(--text);
+    font-family: inherit;
+    font-size: 0.75rem;
+    outline: none;
+  }
+
+  .priority-field:focus {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent) 20%, transparent);
   }
 </style>

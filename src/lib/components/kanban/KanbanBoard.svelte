@@ -512,6 +512,7 @@
     initialPlanMode={editingTodo.planMode}
     initialThinkingMode={editingTodo.thinkingMode}
     initialModel={editingTodo.model}
+    initialPriority={editingTodo.priority}
     submitLabel="Save"
     onSubmit={handleEditSubmit}
     onCancel={() => { editingTodo = null; }}
