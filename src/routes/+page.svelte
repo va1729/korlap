@@ -535,6 +535,7 @@
     provider?: AgentProvider;
     ready?: boolean;
     depends_on?: string[];
+    priority?: number;
     created_at: number;
   }
   let todos = $state<TodoItem[]>([]);
@@ -1101,7 +1102,7 @@
     return Promise.all(newImages.map((img) => saveImage(namespace, img.base64, img.extension)));
   }
 
-  async function handleNewTodo(data: { title: string; description: string; newImages: PastedImage[]; existingPaths: string[]; mentions?: Mention[]; planMode?: boolean; thinkingMode?: boolean; model?: string; provider?: AgentProvider }): Promise<string | null> {
+  async function handleNewTodo(data: { title: string; description: string; newImages: PastedImage[]; existingPaths: string[]; mentions?: Mention[]; planMode?: boolean; thinkingMode?: boolean; model?: string; provider?: AgentProvider; priority?: number }): Promise<string | null> {
     if (!activeRepo) return null;
     if (!data.title.trim() && data.newImages.length === 0 && data.existingPaths.length === 0) return null;
     try {
@@ -1120,6 +1121,7 @@
         thinkingMode: data.thinkingMode || undefined,
         model: data.model || undefined,
         provider: data.provider || undefined,
+        priority: data.priority,
         created_at: Date.now() / 1000,
       });
       persistTodos();
@@ -1136,7 +1138,7 @@
     if (todoId) await handleSpawnFromTodo(todoId);
   }
 
-  async function handleEditTodo(todoId: string, data: { title: string; description: string; newImages: PastedImage[]; existingPaths: string[]; mentions?: Mention[]; planMode?: boolean; thinkingMode?: boolean; model?: string; provider?: AgentProvider }) {
+  async function handleEditTodo(todoId: string, data: { title: string; description: string; newImages: PastedImage[]; existingPaths: string[]; mentions?: Mention[]; planMode?: boolean; thinkingMode?: boolean; model?: string; provider?: AgentProvider; priority?: number }) {
     const todo = todos.find((t) => t.id === todoId);
     if (!todo) return;
     try {
@@ -1150,6 +1152,7 @@
       todo.planMode = data.planMode || undefined;
       todo.thinkingMode = data.thinkingMode || undefined;
       todo.model = data.model || undefined;
+      todo.priority = data.priority;
       persistTodos();
       if (autopilotEnabled) updateDependencies();
     } catch (e) {
